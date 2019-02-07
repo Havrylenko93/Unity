@@ -1,0 +1,9 @@
+{
+    "name": "chisw/sequence-php-bot",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "App\\": "App"
+        }
+    }
+}
