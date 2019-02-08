@@ -11,20 +11,24 @@ class Unity implements BotInterface
     public function turn(Client $client, int $turnNumber)
     {
         if (count($client->notMyPlanets) > 0) {
-            $toPlanet = reset($client->notMyPlanets); // first enemy planet
 
             foreach ($client->myPlanets as $planet) {
-                $a = $this->getNearestPlanet($client, $planet, $client->neutralPlanets);
 
-
-                $random = $client->notMyPlanets[array_rand($client->notMyPlanets)]; // random enemy planet
-                if ($planet->value > 1) {
-
-                    if ($planet->value > 10) {
-                        $client->send($planet, $random, (int)(round($planet->value / 2)));
-                    }
-                    $ships = 1;
-                    $client->send($planet, $toPlanet, $ships);
+                if ($planet->value > 3) {
+                    $ships = (int)(round($planet->value * 0.6));
+                    /**
+                     * уот куда-то сюда можно встроить проверку на то не идет ли на эту планету корабль и за сколько
+                     * ходов с учетом роста кораблей на планете корабль сюда борется и хватит ли ему захватить ее
+                     * можно еще высчитать оптимальное кол-во кораблей для отправки
+                     */
+                   /* if (($nearestNeutralPlanet = $this->getNearestPlanet($client, $planet, $client->neutralPlanets)) !== false) {
+                        $client->send($planet, $nearestNeutralPlanet, $ships);
+                    } elseif ((($nearestEnemyPlanet = $this->getNearestPlanet($client, $planet, $client->enemyPlanets)) !== false)) {
+                        $client->send($planet, $nearestEnemyPlanet, $ships);
+                    } else {
+                        $client->send($planet, $this->getNearestPlanet($client, $planet, $client->myPlanets), $ships);
+                    }*/
+                    $client->send($planet, $this->getNearestPlanet($client, $planet, $client->notMyPlanets), $ships);
                     $planet->value -= $ships;
                 }
             }
