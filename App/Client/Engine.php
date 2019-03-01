@@ -100,6 +100,7 @@ class Engine
                 $this->waitSignal();
             } else {
                 pcntl_signal(SIGTERM, function () {
+//                    $this->log('pcntl_signal');
                     exit(0);
                 });
                 usleep(5);
@@ -127,9 +128,7 @@ class Engine
 
     private function turn()
     {
-        $data = $this->getGameData();
-        $str = mb_strcut($data, 2, null, 'UTF-8');
-        $arr = explode(':', $str);
+        $arr = explode(':', $this->getGameData());
         if ($arr) {
             $this->client->parseData($arr);
             $this->bot->turn($this->client, $this->client->turnNumber);
@@ -139,15 +138,19 @@ class Engine
     private function getGameData()
     {
         $data = shmop_read($this->shm, 0, shmop_size($this->shm));
-
-        return trim($data);
+        $delimiter = strpos($data, '~');
+        $result = substr($data,2, $delimiter - 2);
+//        $this->log($result);
+        return $result;
     }
 
     private function socketRead($parentPid)
     {
         while ($out = socket_read($this->socket, $this->byteLength)) {
             if ($out) {
+//                $this->log('got data');
                 if (substr($out, -4) === 'stop') {
+//                    $this->log('stop');
                     socket_shutdown($this->socket, 2);
                     socket_close($this->socket);
                     shmop_delete($this->shm);
@@ -155,9 +158,11 @@ class Engine
                     posix_kill($parentPid, SIGUSR1);
                     exit(0);
                 } else {
+//                    $this->log('!stop');
                     $startTime = microtime(true);
                     $this->setGameData($out . ';' . $startTime);
                     posix_kill($parentPid, SIGALRM);
+//                    $this->log('SIGALRM');
                 }
             }
         }
@@ -165,10 +170,15 @@ class Engine
 
     private function setGameData($str)
     {
-        shmop_write($this->shm, str_pad($str, shmop_size($this->shm), ' ', STR_PAD_RIGHT), 0);
+        shmop_delete($this->shm);
+        shmop_write(
+            $this->shm,
+            $str . '~',
+            0
+        );
     }
 
-    public function socketWrite(string $message)
+    public function socketWrite($message)
     {
         $len = strlen($message);
         $message = chr(0xff & ($len >> 8)) . chr(0xff & $len) . $message;
@@ -211,10 +221,4 @@ class Engine
         $port = $argv[2] ?? 15000;
         (new self((string)$ip, (int)$port, $botClass))->run();
     }
-
-    private function log($msg, $file = 'log')
-    {
-        file_put_contents($file, getmypid() . ':' . $msg . PHP_EOL . PHP_EOL, FILE_APPEND);
-    }
-
 }
